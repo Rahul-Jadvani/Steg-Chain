@@ -1,49 +1,59 @@
 from flet import *
 import time
-from GUI.Screens import HomeScreen
-from GUI.Screens import GenerateKey
-from GUI.Screens import Encryption
-from GUI.Screens import Decryption
-from GUI.Screens import Difference
-
+from typing import Optional, Callable
+from GUI.Screens import HomeScreen, GenerateKey, Encryption, Decryption, Difference
 
 class MainPanel:
-
-    Page.title = "Image Steganography"
-    Page.horizontal_alignment = "start"
-    Page.vertical_alignment = "start"
-    current_page = "ENCRYPTION"
+    def __init__(self):
+        self.current_page: str = "HOME"
 
     def main(self, page: Page):
+        # Configure page settings
+        page.title = "Image Steganography"
+        page.horizontal_alignment = "center"
+        page.vertical_alignment = "center"
+
+        # Screen handling methods
+        def handle_screen_change(screen_name: str, screen_generator: Callable):
+            """
+            Generic screen change handler with error handling
+            """
+            try:
+                self.current_page = screen_name
+                wrapper[1] = screen_generator()
+                page.update()
+            except Exception as e:
+                print(f"Error changing to {screen_name} screen: {e}")
+
+        # Specific screen handlers using generic method
         def handle_home_screen(e):
-            self.current_page = "HOME"
-            wrapper[1] = HomeScreen().home_screen()
-            page.update()
+            handle_screen_change("HOME", HomeScreen().home_screen)
 
         def handle_comparison_screen(e):
-            self.current_page = "COMPARISON"
-            wrapper[1] = Difference(page).difference_panel()
-            page.update()
+            handle_screen_change("COMPARISON", lambda: Difference(page).difference_panel())
 
         def handle_key_generation_screen(e):
-            self.current_page = "GENERATEKEY"
-            wrapper[1] = GenerateKey().generate_key()
-            page.update()
+            handle_screen_change("GENERATEKEY", GenerateKey().generate_key)
 
         def handle_encryption_screen(e):
-            print("Enc")
-            self.current_page = "ENCRYPTION"
-            wrapper[1] = Encryption(page).encryption()
-            page.update()
+            handle_screen_change("ENCRYPTION", lambda: Encryption(page).encryption())
 
         def handle_decryption_screen(e):
-            self.current_page = "DECRYPTION"
-            wrapper[1] = Decryption(page).decryption()
-            page.update()
+            handle_screen_change("DECRYPTION", lambda: Decryption(page).decryption())
 
-
-        def user_data(self, initials: str, name: str, description: str):
-            print("user_data")
+        # User data display method with type hints and improved docstring
+        def user_data(self, initials: str, name: str, description: str) -> Container:
+            """
+            Create a user data container with initials, name, and description
+            
+            Args:
+                initials (str): Short user/app identifier
+                name (str): Main display name
+                description (str): Subtitle or brief description
+            
+            Returns:
+                Container: Styled user data display
+            """
             return Container(
                 content=Row(
                     controls=[
@@ -67,16 +77,12 @@ class MainPanel:
                                     value=name,
                                     size=15,
                                     weight="bold",
-                                    opacity=1,
-                                    animate_opacity=200,
                                 ),
                                 Text(
                                     value=description,
                                     size=13,
                                     weight="w400",
                                     color="white54",
-                                    opacity=1,
-                                    animate_opacity=200,
                                 ),
                             ],
                         ),
@@ -84,12 +90,22 @@ class MainPanel:
                 )
             )
 
-        def contained_icon(self, icon_name, text):
+        # Improved contained icon method with type hints
+        def contained_icon(self, icon_name: str, text: str) -> Container:
+            """
+            Create a container with an icon and text
+            
+            Args:
+                icon_name (str): Name of the icon
+                text (str): Text to display next to icon
+            
+            Returns:
+                Container: Styled icon and text container
+            """
             return Container(
                 width=180,
                 height=45,
                 border_radius=10,
-                # on_hover=lambda e: highlight_container(e),
                 ink=True,
                 content=Row(
                     controls=[
@@ -97,7 +113,6 @@ class MainPanel:
                             icon=icon_name,
                             icon_size=25,
                             icon_color="white54",
-                            selected=False,
                             style=ButtonStyle(
                                 shape={
                                     "": RoundedRectangleBorder(radius=7),
@@ -109,15 +124,12 @@ class MainPanel:
                             value=text,
                             color="white54",
                             size=15,
-                            opacity=1,
-                            animate_opacity=200,
                         ),
                     ],
                 ),
             )
 
-        # def build(self):
-        #     print("build")
+        # Navigation sidebar
         build = Container(
             width=200,
             height=580,
@@ -126,102 +138,89 @@ class MainPanel:
                 alignment=MainAxisAlignment.START,
                 horizontal_alignment=CrossAxisAlignment.CENTER,
                 controls=[
-                    user_data("IS", "IS", "Image Steganography", "Hide Data into Image"),
-
+                    user_data(self, "IS", "IS", "Image Steganography"),
                     Divider(height=5, color="white24"),
-                    GestureDetector(
-                        on_tap=handle_home_screen,
-                        content=contained_icon(icons.HOME_ROUNDED, icons.HOME_ROUNDED, "Home", ),
-                    ),
-                    GestureDetector(
-                        on_tap=handle_key_generation_screen,
-                        content=contained_icon(icons.KEY_ROUNDED, icons.KEY_ROUNDED, "Generate Key"),
-                    ),
-                    GestureDetector(
-                        on_tap=handle_encryption_screen,
-                        content=
-                        contained_icon(icons.LOCK_ROUNDED, icons.LOCK_ROUNDED, "Encryption"),
-                    ),
-                    GestureDetector(
-                        on_tap=handle_decryption_screen,
-                        content=
-                        contained_icon(icons.LOCK_OPEN_ROUNDED, icons.LOCK_OPEN_ROUNDED, "Decryption"),
-                    ),
-                    GestureDetector(
-                        on_tap=handle_comparison_screen,
-                        content=
-                        contained_icon(icons.CODE_ROUNDED, icons.CODE_ROUNDED, "Comparison"),
-                    ),
+                    
+                    # Consolidated navigation items
+                    *[
+                        GestureDetector(
+                            on_tap=handler,
+                            content=contained_icon(self, icon, label)
+                        ) 
+                        for handler, icon, label in [
+                            (handle_home_screen, icons.HOME_ROUNDED, "Home"),
+                            (handle_key_generation_screen, icons.KEY_ROUNDED, "Generate Key"),
+                            (handle_encryption_screen, icons.LOCK_ROUNDED, "Encryption"),
+                            (handle_decryption_screen, icons.LOCK_OPEN_ROUNDED, "Decryption"),
+                            (handle_comparison_screen, icons.CODE_ROUNDED, "Comparison"),
+                        ]
+                    ],
+                    
                     Divider(height=5, color="white24"),
                 ],
             ),
         )
 
+        # Wrapper for sidebar and main content
         wrapper = [
-                Container(
-                    width=200,
-                    height=580,
-                    animate=animation.Animation(500, "decelerate"),
-                    border_radius=10,
-                    padding=10,
-                    # content=ModernNavBar(animated_navBar),
-                    content=build,
-                ),
-                HomeScreen().home_screen(),
-                # GenerateKey().generate_key(),
-                # Encryption(page).encryption(),
-                # Decryption(page).decryption(),
-                # Difference(page).difference_panel()
-            ]
+            Container(
+                width=200,
+                height=580,
+                animate=animation.Animation(500, "decelerate"),
+                border_radius=10,
+                padding=10,
+                content=build,
+            ),
+            HomeScreen().home_screen(),
+        ]
 
-
-
+        # Navbar animation with improved structure
         def animated_navBar(e):
-            if page.controls[0].width != 62:
-                for item in (
-                    page.controls[0]
-                    .content.controls[0]
-                    .content.controls[0]
-                    .content.controls[1]
-                    .controls[:]
-                ):
-                    item.opacity = 0
-                    item.update()
+            """
+            Animate navigation bar expansion/collapse
+            """
+            navbar = page.controls[0]
+            is_expanded = navbar.width != 62
 
-                for item in page.controls[0].content.controls[0].content.controls[3:]:
-                    if isinstance(item, Container):
-
-                        item.content.controls[1].opacity = 0
-                        item.content.update()
-
-                time.sleep(0.2)
-
-                page.controls[0].width = 62
-                page.controls[0].update()
-
+            if not is_expanded:
+                # Collapse logic
+                _collapse_navbar(navbar)
             else:
-                page.controls[0].width = 200
-                page.controls[0].update()
+                # Expand logic
+                _expand_navbar(navbar)
 
-                time.sleep(0.2)
+        def _collapse_navbar(navbar):
+            """Helper to collapse navbar"""
+            for item in navbar.content.controls[0].content.controls[0].content.controls[1].controls[:]:
+                item.opacity = 0
+                item.update()
 
-                for item in (
-                    page.controls[0]
-                    .content.controls[0]
-                    .content.controls[0]
-                    .content.controls[1]
-                    .controls[:]
-                ):
-                    item.opacity = 1
-                    item.update()
+            for item in navbar.content.controls[0].content.controls[3:]:
+                if isinstance(item, Container):
+                    item.content.controls[1].opacity = 0
+                    item.content.update()
 
-                for item in page.controls[0].content.controls[0].content.controls[3:]:
-                    if isinstance(item, Container):
+            time.sleep(0.2)
+            navbar.width = 62
+            navbar.update()
 
-                        item.content.controls[1].opacity = 1
-                        item.content.update()
+        def _expand_navbar(navbar):
+            """Helper to expand navbar"""
+            navbar.width = 200
+            navbar.update()
 
+            time.sleep(0.2)
 
+            for item in navbar.content.controls[0].content.controls[0].content.controls[1].controls[:]:
+                item.opacity = 1
+                item.update()
+
+            for item in navbar.content.controls[0].content.controls[3:]:
+                if isinstance(item, Container):
+                    item.content.controls[1].opacity = 1
+                    item.content.update()
+
+        # Add content to page
         page.add(
             Row(wrapper, alignment=alignment.center),
         )

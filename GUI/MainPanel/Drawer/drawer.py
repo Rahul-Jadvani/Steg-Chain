@@ -114,16 +114,16 @@ class ModernNavBar(UserControl):
                 horizontal_alignment=CrossAxisAlignment.CENTER,
                 controls=[
                     self.user_data("IS", "Image Steganography", "Hide Data into Image"),
-                    # Container(
-                    #     width=30,
-                    #     height=30,
-                    #     bgcolor="bluegrey600",
-                    #     border_radius=8,
-                    #     on_click=partial(self.func),
-                    #     content=Icon(
-                    #         name=icons.DOUBLE_ARROW_ROUNDED,
-                    #     )
-                    # ),
+                    Container(
+                        width=30,
+                        height=30,
+                        bgcolor="bluegrey600",
+                        border_radius=8,
+                        on_click=partial(self.func),
+                        content=Icon(
+                            name=icons.DOUBLE_ARROW_ROUNDED,
+                        )
+                    ),
                     Divider(height=5, color="white24"),
                     GestureDetector(
                         on_tap=self.handle_home_screen,
