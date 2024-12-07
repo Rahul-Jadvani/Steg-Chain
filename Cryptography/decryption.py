@@ -1,8 +1,6 @@
-# AES Decryption
-from Crypto import Random
-from Crypto.Cipher import AES
-import os
-import os.path
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.padding import PKCS7
+from cryptography.hazmat.backends import default_backend
 
 
 class Decrypter:
@@ -10,16 +8,30 @@ class Decrypter:
         self.key = key
 
     def decrypt(self, ciphertext):
-        key = b'[EX\xc8\xd5\xbfI{\xa2$\x05(\xd5\x18\xbf\xc0\x85)\x10nc\x94\x02)j\xdf\xcb\xc4\x94\x9d(\x9e'
-        iv = ciphertext[:AES.block_size]
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        plaintext = cipher.decrypt(ciphertext[AES.block_size:])
-        return plaintext.rstrip(b"\0")
+        # Ensure the key is 32 bytes (256 bits) for AES-256
+        assert len(self.key) == 32, "Key must be 32 bytes long."
+
+        # Extract the IV (first 16 bytes)
+        iv = ciphertext[:16]
+        actual_ciphertext = ciphertext[16:]
+
+        # Create the cipher
+        cipher = Cipher(algorithms.AES(self.key), modes.CBC(iv), backend=default_backend())
+        decryptor = cipher.decryptor()
+        padded_plaintext = decryptor.update(actual_ciphertext) + decryptor.finalize()
+
+        # Unpad the plaintext
+        unpadder = PKCS7(128).unpadder()
+        plaintext = unpadder.update(padded_plaintext) + unpadder.finalize()
+
+        return plaintext
 
     def decrypt_file(self, file_name):
         with open(file_name, 'rb') as fo:
             ciphertext = fo.read()
+
         dec = self.decrypt(ciphertext)
+        # Uncomment the following lines to write the decrypted content back to a file
         # with open(file_name[:-4], 'wb') as fo:
         #     fo.write(dec)
         # os.remove(file_name)

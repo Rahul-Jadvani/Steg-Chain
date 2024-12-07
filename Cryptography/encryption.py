@@ -1,28 +1,36 @@
-# AES Encryption
-from Crypto import Random
-from Crypto.Cipher import AES
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.padding import PKCS7
+from cryptography.hazmat.backends import default_backend
 import os
-import os.path
 
 
 class Encrypter:
     def __init__(self, key):
         self.key = key
 
-    def padder(self, s):
-        return s + b"\0" * (AES.block_size - len(s) % AES.block_size)
+    def encrypt(self, message):
+        # Ensure the key is 32 bytes (256 bits) for AES-256
+        assert len(self.key) == 32, "Key must be 32 bytes long."
 
-    def encrypt(self, message, key_size=256):
-        key = b'[EX\xc8\xd5\xbfI{\xa2$\x05(\xd5\x18\xbf\xc0\x85)\x10nc\x94\x02)j\xdf\xcb\xc4\x94\x9d(\x9e'
-        message = self.padder(message)
-        iv = Random.new().read(AES.block_size)
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        return iv + cipher.encrypt(message)
+        # Initialize a random IV
+        iv = os.urandom(16)
+
+        # Pad the message to ensure it's a multiple of the block size
+        padder = PKCS7(128).padder()
+        padded_message = padder.update(message) + padder.finalize()
+
+        # Create the cipher
+        cipher = Cipher(algorithms.AES(self.key), modes.CBC(iv), backend=default_backend())
+        encryptor = cipher.encryptor()
+        ciphertext = encryptor.update(padded_message) + encryptor.finalize()
+
+        return iv + ciphertext
 
     def encrypt_file(self, file_name):
         with open(file_name, 'rb') as fo:
             plaintext = fo.read()
-        enc = self.encrypt(plaintext, self.key)
+
+        enc = self.encrypt(plaintext)
         with open(file_name + ".enc", 'wb') as fo:
             fo.write(enc)
         os.remove(file_name)

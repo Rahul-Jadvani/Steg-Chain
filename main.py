@@ -1,4 +1,4 @@
-from flet import *
+import flet
 from GUI.MainPanel import MainPanel
 
 if __name__ == "__main__":

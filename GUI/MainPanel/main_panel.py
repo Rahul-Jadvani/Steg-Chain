@@ -9,9 +9,9 @@ from GUI.Screens import Difference
 
 class MainPanel:
 
-    page.title = "Image Steganography"
-    page.horizontal_alignment = "start"
-    page.vertical_alignment = "start"
+    Page.title = "Image Steganography"
+    Page.horizontal_alignment = "start"
+    Page.vertical_alignment = "start"
     current_page = "ENCRYPTION"
 
     def main(self, page: Page):
