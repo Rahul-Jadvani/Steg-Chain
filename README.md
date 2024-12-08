@@ -33,7 +33,7 @@ After Encrypting plain data, encrypted data will be embedded into image by LSB M
 
 ### Contributors
 
-- [Rahul-Jadvani] [https://github.com/Rahul-Jadvani]
+- [Rahul-Jadvani][https://github.com/Rahul-Jadvani]
 
 ### LICENSE
 [![License](https://img.shields.io/github/license/omjogani/Image-steganography?color=565BDD&style=for-the-badge)](./LICENSE)
