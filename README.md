@@ -7,14 +7,14 @@ Data which is supposed to be hidden in Image will be encrypted by AES(Advanced E
 ### Screenshots
 
 ---
-![HomeScreen](https://github.com/omjogani/Image-steganography/blob/master/Screenshots/home_screen.JPG?raw=true "Home Screen")
-Checkout More Screenshots [here](https://github.com/omjogani/Image-steganography/tree/master/Screenshots)
+![HomeScreen](https://github.com/Rahul-Jadvani/Steg-Chain/blob/main/Screenshots/home_screen.JPG)
+Checkout More Screenshots [here](https://github.com/Rahul-Jadvani/Steg-Chain/blob/main/Screenshots)
 
 ### Documentations
 
 ---
-- [Report](https://github.com/omjogani/Image-steganography/blob/master/Docs/Report.Image-Steganography.pdf)
-- [Presentation](https://github.com/omjogani/Image-steganography/blob/master/Docs/Presentation.Image-Steganography.pdf)
+- [Report]()
+- [Presentation]()
 
 
 ### Technical Details
@@ -33,7 +33,7 @@ After Encrypting plain data, encrypted data will be embedded into image by LSB M
 
 ### Contributors
 
-- [Rahul-Jadvani][https://github.com/Rahul-Jadvani]
+- [Rahul-Jadvani](https://github.com/Rahul-Jadvani)
 
 ### LICENSE
 [![License](https://img.shields.io/github/license/omjogani/Image-steganography?color=565BDD&style=for-the-badge)](./LICENSE)
