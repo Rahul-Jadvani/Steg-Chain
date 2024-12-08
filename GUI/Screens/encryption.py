@@ -1,17 +1,17 @@
 import flet as ft
-
-import Cryptography
-import Steganography
-from GUI.Constants import TextStyle
 import os
 import base64
+from Cryptography import KeyGeneration, Encrypter
+from Steganography import Encoding
+from GUI.Constants import TextStyle
+
 
 class Encryption:
     def __init__(self, page):
         self.page = page
         super().__init__()
 
-    information = "Choose Image File & Key that will used to encrypt the data and generate Stego Image..."
+    information = "Choose an image file and key to encrypt the data and generate a stego image..."
     image_path = ""
     image_file_name = ""
     key_file_name = ft.TextField(
@@ -39,7 +39,7 @@ class Encryption:
     def encryption(self):
         def handle_encrypt_event(e):
             if self.image_path == "":
-                self.response_message.value = "Please Choose Image..."
+                self.response_message.value = "Please choose an image..."
                 self.response_message.color = ft.colors.RED_ACCENT
                 self.response_message.update()
                 return
@@ -56,43 +56,60 @@ class Encryption:
                 self.response_message.update()
                 return
 
-            key = f"C:\secret\key\{self.key_file_name.value}.txt.enc"
+            # Key file path
+            key_file_path = fr"c:\Users\Ray04\Desktop\coding\UNI\StegChain\Key_file\{self.key_file_name.value}.txt.enc"
 
-            # check existence of key file
-            if not os.path.exists(key):
-                self.response_message.value = "Key File is not found!, If not generate please generate it!"
+            # Debugging print to check the key file path
+            print(f"Key file path: {key_file_path}")
+
+            # Check existence of key file using os.path.exists()
+            if not os.path.exists(key_file_path):
+                print("Key file does not exist!")  # Debugging print
+                self.response_message.value = (
+                    "Key file not found! If not generated, please generate it."
+                )
                 self.response_message.color = ft.colors.RED_ACCENT
                 self.response_message.update()
                 return
 
-            encoded_string = self.key_data.value.encode()
-            byte_array = bytearray(encoded_string)
+            try:
+                # Read the encryption key
+                with open(key_file_path, "rb") as key_file:
+                    key = key_file.read()
 
-            encrypted_data = Cryptography.Encrypter(key).encrypt(byte_array)
-            destination_image_path = fr"C:\secret\stego\{self.image_file_name}"
-            dummy = "hello there this is plain text from string"
-            data_to_pass = base64.b64encode(encrypted_data).decode()
+                # Encrypt the provided data
+                data_to_encrypt = self.key_data.value.encode()
+                encrypter = Encrypter(key)
+                encrypted_data = encrypter.encrypt(data_to_encrypt)
 
+                # Encode the encrypted data to base64 for steganography
+                encoded_data = base64.b64encode(encrypted_data).decode()
 
-            # Steganography.Encoding.encode(self.image_path, str(encrypted_data), destination_image_path)
-            Steganography.Encoding.encode(self.image_path, data_to_pass, destination_image_path)
+                # Define destination path for the stego image
+                destination_image_path = fr"c:\Users\Ray04\Desktop\coding\UNI\StegChain\EncImg\{self.image_file_name}"
 
-            # plaintext = Cryptography.Decrypter(key).decrypt(encrypted_data)
-            # print(plaintext)
+                # Use Steganography to encode the encrypted data into the image
+                Encoding.encode(self.image_path, encoded_data, destination_image_path)
 
-            self.response_message.value = "Encrypted Image Saved..."
-            self.response_message.color = ft.colors.GREEN_ACCENT
-            self.response_message.update()
+                self.response_message.value = "Encrypted image saved successfully!"
+                self.response_message.color = ft.colors.GREEN_ACCENT
+                self.response_message.update()
+
+            except Exception as ex:
+                self.response_message.value = f"Error during encryption: {str(ex)}"
+                self.response_message.color = ft.colors.RED_ACCENT
+                self.response_message.update()
 
         def on_dialog_result(e: ft.FilePickerResultEvent):
-            print("Selected files:", e.files)
-            print("Selected file or directory:", e.files[0].path)
-            self.image_path = e.files[0].path
-            self.image_file_name = e.files[0].name
-            # File path is available here: Om
+            if e.files:
+                self.image_path = e.files[0].path
+                self.image_file_name = e.files[0].name
 
+        # File picker
         my_pick = ft.FilePicker(on_result=on_dialog_result)
         self.page.overlay.append(my_pick)
+
+        # Build UI components
         return ft.Container(
             expand=True,
             content=ft.Column(
@@ -101,10 +118,7 @@ class Encryption:
                         "Encryption",
                         size=TextStyle.HEADERFONTSIZE
                     ),
-                    ft.Container(
-                        height=10.0,
-                        width=10.0,
-                    ),
+                    ft.Container(height=10.0, width=10.0),
                     ft.Container(
                         width=500.0,
                         content=ft.Row(
@@ -113,10 +127,7 @@ class Encryption:
                                     name=ft.icons.INFO_ROUNDED,
                                     color=ft.colors.INDIGO_200
                                 ),
-                                ft.Text(
-                                    self.information,
-                                    width=480.0,
-                                ),
+                                ft.Text(self.information, width=480.0),
                             ],
                         ),
                     ),
@@ -131,10 +142,6 @@ class Encryption:
                                 ),
                             ],
                         ),
-                    ),
-
-                    ft.Container(
-                        width=500.0,
                     ),
                     self.key_file_name,
                     self.key_data,

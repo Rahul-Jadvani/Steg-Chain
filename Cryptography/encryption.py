@@ -6,20 +6,21 @@ import os
 
 class Encrypter:
     def __init__(self, key):
+        """
+        Initializes the Encrypter with a key of valid length.
+        """
+        if len(key) not in [16, 24, 32]:
+            raise ValueError("Key must be 16, 24, or 32 bytes long.")
         self.key = key
 
     def encrypt(self, message):
-        # Ensure the key is 32 bytes (256 bits) for AES-256
-        assert len(self.key) == 32, "Key must be 32 bytes long."
-
-        # Initialize a random IV
+        """
+        Encrypts a message using AES in CBC mode with PKCS7 padding.
+        """
         iv = os.urandom(16)
-
-        # Pad the message to ensure it's a multiple of the block size
         padder = PKCS7(128).padder()
         padded_message = padder.update(message) + padder.finalize()
 
-        # Create the cipher
         cipher = Cipher(algorithms.AES(self.key), modes.CBC(iv), backend=default_backend())
         encryptor = cipher.encryptor()
         ciphertext = encryptor.update(padded_message) + encryptor.finalize()
@@ -27,10 +28,14 @@ class Encrypter:
         return iv + ciphertext
 
     def encrypt_file(self, file_name):
+        """
+        Encrypts a file and appends '.enc' to the encrypted file's name.
+        """
         with open(file_name, 'rb') as fo:
             plaintext = fo.read()
 
-        enc = self.encrypt(plaintext)
+        encrypted_data = self.encrypt(plaintext)
         with open(file_name + ".enc", 'wb') as fo:
-            fo.write(enc)
-        os.remove(file_name)
+            fo.write(encrypted_data)
+
+        os.remove(file_name)  # Remove the original file

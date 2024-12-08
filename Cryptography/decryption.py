@@ -1,38 +1,66 @@
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.padding import PKCS7
 from cryptography.hazmat.backends import default_backend
-
+import os
 
 class Decrypter:
     def __init__(self, key):
+        """
+        Initializes the Decrypter with a key of valid length.
+        """
+        if len(key) not in [16, 24, 32]:
+            raise ValueError("Key must be 16, 24, or 32 bytes long.")
+        
+        # Ensure the key is exactly 32 bytes (padding if necessary)
+        if len(key) < 32:
+            key = key.ljust(32, b'\0')  # Pad with null bytes if it's shorter than 32 bytes
+        elif len(key) > 32:
+            key = key[:32]  # Truncate if the key is longer than 32 bytes
+        
         self.key = key
 
     def decrypt(self, ciphertext):
-        # Ensure the key is 32 bytes (256 bits) for AES-256
-        assert len(self.key) == 32, "Key must be 32 bytes long."
-
-        # Extract the IV (first 16 bytes)
-        iv = ciphertext[:16]
-        actual_ciphertext = ciphertext[16:]
-
-        # Create the cipher
-        cipher = Cipher(algorithms.AES(self.key), modes.CBC(iv), backend=default_backend())
-        decryptor = cipher.decryptor()
-        padded_plaintext = decryptor.update(actual_ciphertext) + decryptor.finalize()
-
-        # Unpad the plaintext
-        unpadder = PKCS7(128).unpadder()
-        plaintext = unpadder.update(padded_plaintext) + unpadder.finalize()
-
-        return plaintext
+        """
+        Decrypts a ciphertext using AES in CBC mode with PKCS7 padding.
+        """
+        try:
+            iv = ciphertext[:16]  # Extract the first 16 bytes as the IV
+            actual_ciphertext = ciphertext[16:]  # The remaining part is the actual ciphertext
+            
+            cipher = Cipher(algorithms.AES(self.key), modes.CBC(iv), backend=default_backend())
+            decryptor = cipher.decryptor()
+            padded_plaintext = decryptor.update(actual_ciphertext) + decryptor.finalize()
+            
+            # Remove PKCS7 padding
+            unpadder = PKCS7(128).unpadder()
+            plaintext = unpadder.update(padded_plaintext) + unpadder.finalize()
+            
+            return plaintext
+        
+        except Exception as e:
+            raise ValueError(f"Decryption failed: {str(e)}")
 
     def decrypt_file(self, file_name):
-        with open(file_name, 'rb') as fo:
-            ciphertext = fo.read()
+        """
+        Decrypts an encrypted file and writes the decrypted content back to the original file name.
+        """
+        if not os.path.exists(file_name):
+            raise FileNotFoundError(f"The file {file_name} does not exist.")
+        
+        try:
+            with open(file_name, 'rb') as fo:
+                ciphertext = fo.read()
 
-        dec = self.decrypt(ciphertext)
-        # Uncomment the following lines to write the decrypted content back to a file
-        # with open(file_name[:-4], 'wb') as fo:
-        #     fo.write(dec)
-        # os.remove(file_name)
-        return dec
+            # Decrypt the file contents
+            decrypted_data = self.decrypt(ciphertext)
+            
+            original_file_name = file_name[:-4]  # Remove '.enc' extension from file name
+            with open(original_file_name, 'wb') as fo:
+                fo.write(decrypted_data)
+
+            # Remove the encrypted file
+            os.remove(file_name)
+            print(f"File decrypted successfully: {original_file_name}")
+
+        except Exception as e:
+            raise ValueError(f"Error during file decryption: {str(e)}")

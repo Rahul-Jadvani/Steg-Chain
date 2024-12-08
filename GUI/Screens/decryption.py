@@ -1,5 +1,4 @@
 import flet as ft
-
 import Cryptography
 import Steganography
 from GUI.Constants import TextStyle
@@ -7,146 +6,129 @@ import os
 import base64
 
 class Decryption:
-    def __init__(self, page):
+    def __init__(self, page, generated_key=None):
         self.page = page
-        super().__init__()
+        self.image_file_path = ""
+        self.generated_key = generated_key  # Store the generated key passed from GenerateKey
+        self.information = "Choose the Stego Image and Key File to decrypt and extract hidden data."
+        self.key_file_name = ft.TextField(
+            label="Key File Name",
+            hint_text="Enter Key File Name",
+            width=500.0,
+            border_color=ft.colors.INDIGO_200,
+        )
+        self.key_data = ft.TextField(
+            label="Key Value",
+            hint_text="Enter Key Value",
+            width=500.0,
+            multiline=True,
+            border_color=ft.colors.INDIGO_200,
+            min_lines=1,
+            max_lines=5,
+        )
+        self.output_window = ft.TextField(
+            label="Decrypted Message",
+            read_only=True,
+            width=500.0,
+            multiline=True,
+            border_color=ft.colors.INDIGO_200,
+            min_lines=5,
+            max_lines=5,
+        )
+        self.response_message = ft.Text("", color=ft.colors.GREEN_ACCENT)
 
-    image_file_path = ""
-    image_name = ""
-    information = "Choose Image File & Key that will used to encrypt the data and generate Stego Image..."
-    key_file_name = ft.TextField(
-        label="Key File Name",
-        hint_text="Enter Key File Name",
-        width=500.0,
-        border_color=ft.colors.INDIGO_200,
-    )
-    key_data = ft.TextField(
-        label="Key Value",
-        hint_text="Enter Key Value",
-        width=500.0,
-        multiline=True,
-        border_color=ft.colors.INDIGO_200,
-        min_lines=1,
-        max_lines=5,
-    )
+        # Auto-fill the key field with the generated key if available
+        if self.generated_key:
+            self.key_data.value = self.generated_key
+            self.key_data.update()
 
-    output_window = ft.TextField(
-        label="Decrypted Message",
-        hint_text="Enter Your Message Here",
-        width=500.0,
-        read_only=True,
-        value="",
-        multiline=True,
-        border_color=ft.colors.INDIGO_200,
-        min_lines=5,
-        max_lines=5,
-    )
-    response_message = ft.Text(
-        "",
-        color=ft.colors.GREEN_ACCENT,
-    )
     def decryption(self):
         def handle_decrypt_text(e):
-            if self.image_file_path == "":
-                self.response_message.value = "Please Choose Stego Image..."
-                self.response_message.color = ft.colors.RED_ACCENT
-                self.response_message.update()
+            if not self.image_file_path:
+                self.show_response("Please choose a Stego Image.", is_error=True)
                 return
 
-            if len(self.key_file_name.value) == 0:
-                self.response_message.value = "Key file is required..."
-                self.response_message.color = ft.colors.RED_ACCENT
-                self.response_message.update()
+            if not self.key_file_name.value.strip():
+                self.show_response("Key File Name is required.", is_error=True)
                 return
 
-            key = f"C:\secret\key\{self.key_file_name.value}.txt.enc"
+            # Update this path to the correct key file directory
+            key_file_path = fr"c:\Users\Ray04\Desktop\coding\UNI\StegChain\Key_file\{self.key_file_name.value}.txt.enc"
+            
+            # Debugging print to check the key file path
+            print(f"Key file path: {key_file_path}")
 
-            # check existance of key file
-            if not os.path.exists(key):
-                self.response_message.value = "Key File is not found!, If not generate please generate it!"
-                self.response_message.color = ft.colors.RED_ACCENT
-                self.response_message.update()
+            # Check existence of key file using os.path.exists()
+            if not os.path.exists(key_file_path):
+                print("Key file does not exist!")  # Debugging print
+                self.show_response("Key File not found! Please generate it first.", is_error=True)
                 return
 
-            data_from_enc_file = Cryptography.Decrypter("").decrypt_file(key)
-            if data_from_enc_file.decode("utf-8") != self.key_data.value:
-                self.response_message.value = "Key Value is not Correct"
-                self.response_message.color = ft.colors.RED_ACCENT
-                self.response_message.update()
-                return
+            try:
+                # Decrypt the key
+                decrypted_key = Cryptography.Decrypter("").decrypt_file(key_file_path).decode("utf-8")
+                
+                # Ensure key is of the correct length (16, 24, or 32 bytes)
+                if len(decrypted_key) not in [16, 24, 32]:
+                    decrypted_key = decrypted_key[:32]  # Truncate or pad if needed to 32 bytes
 
-            encrypted_data = Steganography.Decoding.decode(self.image_file_path)
-            decoded = base64.b64decode(encrypted_data)
+                # Autofill the key field with the decrypted key
+                self.key_data.value = decrypted_key
+                self.key_data.update()
 
-            plain_text = Cryptography.Decrypter("").decrypt(decoded)
-            self.output_window.value = plain_text.decode("utf-8")
-            self.output_window.update()
+                # Check if the provided key matches the decrypted key
+                if decrypted_key != self.key_data.value.strip():
+                    self.show_response("Incorrect Key Value.", is_error=True)
+                    return
 
-            self.response_message.value = "Decrypted!"
-            self.response_message.color = ft.colors.GREEN_ACCENT
-            self.response_message.update()
+                # Decode the stego image
+                encoded_data = Steganography.Decoding.decode(self.image_file_path)
 
-        def on_dialog_result(e: ft.FilePickerResultEvent):
-            print("Selected files:", e.files)
-            self.image_file_path = e.files[0].path
-            self.image_file_name = e.files[0].name
+                # Decrypt the extracted data
+                plain_text = Cryptography.Decrypter("").decrypt(base64.b64decode(encoded_data))
 
-        my_pick = ft.FilePicker(on_result=on_dialog_result)
-        self.page.overlay.append(my_pick)
+                # Update the output window with the decrypted message
+                self.output_window.value = plain_text.decode("utf-8")
+                self.output_window.update()
+
+                # Display success message
+                self.show_response("Decryption successful!", is_error=False)
+
+            except Exception as err:
+                # Catch any errors and display the message
+                self.show_response(f"Error during decryption: {str(err)}", is_error=True)
+
+        def on_file_selected(e: ft.FilePickerResultEvent):
+            if e.files:
+                self.image_file_path = e.files[0].path
+
+        # File picker for selecting the image
+        file_picker = ft.FilePicker(on_result=on_file_selected)
+        self.page.overlay.append(file_picker)
+
         return ft.Container(
             expand=True,
             content=ft.Column(
                 [
-                    ft.Text(
-                        "Decryption",
-                        size=TextStyle.HEADERFONTSIZE
-                    ),
-                    ft.Container(
-                        height=10.0,
-                        width=10.0,
-                    ),
-                    ft.Container(
-                        width=500.0,
-                        content=ft.Row(
-                            [
-                                ft.Icon(
-                                    name=ft.icons.INFO_ROUNDED,
-                                    color=ft.colors.INDIGO_200
-                                ),
-                                ft.Text(
-                                    self.information,
-                                    width=480.0,
-                                ),
-                            ],
-                        ),
-                    ),
-                    ft.Container(
-                        width=500.0,
-                        content=ft.Row(
-                            [
-                                ft.ElevatedButton(
-                                    "Pick Encrypted Image File",
-                                    icon=ft.icons.UPLOAD_FILE,
-                                    on_click=lambda _: my_pick.pick_files(),
-                                ),
-                            ],
-                        ),
-                    ),
-                    ft.Container(
-                        width=500.0,
+                    ft.Text("Decryption", size=TextStyle.HEADERFONTSIZE),
+                    ft.Text(self.information, width=500.0),
+                    ft.ElevatedButton(
+                        "Select Stego Image",
+                        icon=ft.icons.UPLOAD_FILE,
+                        on_click=lambda _: file_picker.pick_files(),
                     ),
                     self.key_file_name,
                     self.key_data,
-                    ft.FilledButton(text="Decrypt Image", on_click=handle_decrypt_text),
-                    ft.Container(
-                        height=10.0,
-                        width=10.0,
-                    ),
+                    ft.FilledButton("Decrypt", on_click=handle_decrypt_text),
                     self.output_window,
                     self.response_message,
                 ],
                 alignment=ft.alignment.top_left,
-                expand=True,
             ),
             alignment=ft.alignment.center,
         )
+
+    def show_response(self, message, is_error=False):
+        self.response_message.value = message
+        self.response_message.color = ft.colors.RED_ACCENT if is_error else ft.colors.GREEN_ACCENT
+        self.response_message.update()

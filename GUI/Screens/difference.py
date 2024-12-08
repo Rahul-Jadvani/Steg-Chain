@@ -1,147 +1,74 @@
 import flet as ft
-
-import Cryptography
-from GUI.Constants import TextStyle
 import cv2
 from Steganography import DifferenceStego
-
+from GUI.Constants import TextStyle
 
 class Difference:
     def __init__(self, page):
         self.page = page
-        super().__init__()
+        self.original_image_path = ""
+        self.stego_image_path = ""
+        self.information = "Choose both Original and Stego Images to calculate the differences."
+        self.response_message = ft.Text("", color=ft.colors.GREEN_ACCENT)
+        self.psnr = ft.Text("", color=ft.colors.WHITE)
+        self.mse = ft.Text("", color=ft.colors.WHITE)
+        self.ssim = ft.Text("", color=ft.colors.WHITE)
 
-
-    psnr = ft.Text(
-        "",
-        color=ft.colors.WHITE,
-    )
-    mse = ft.Text(
-        "",
-        color=ft.colors.WHITE,
-    )
-    ssim = ft.Text(
-        "",
-        color=ft.colors.WHITE,
-    )
-    response_message = ft.Text(
-        "",
-        color=ft.colors.GREEN_ACCENT,
-    )
-
-    information = "Choose Both Original & Stego Image to find difference between both images..."
-    original_image_path = ""
-    stego_image_path = ""
     def difference_panel(self):
         def handle_calculate_event(e):
-            if self.original_image_path == "":
-                self.response_message.value = "Please Choose Original Image"
-                self.response_message.color = ft.colors.RED_ACCENT
-                self.response_message.update()
+            if not self.original_image_path or not self.stego_image_path:
+                self.show_response("Both images must be selected.", is_error=True)
                 return
 
-            if self.stego_image_path == "":
-                self.response_message.value = "Please Choose Stego Image"
-                self.response_message.color = ft.colors.RED_ACCENT
-                self.response_message.update()
-                return
+            try:
+                original = cv2.imread(self.original_image_path)
+                stego = cv2.imread(self.stego_image_path)
+                if original is None or stego is None:
+                    raise ValueError("Failed to load one or both images.")
 
-            self.response_message.value = ""
-            self.response_message.color = ft.colors.WHITE
-            self.response_message.update()
+                self.psnr.value = f"PSNR: {DifferenceStego.calculatePSNR(original, stego)}"
+                self.mse.value = f"MSE: {DifferenceStego.calculateMSE(original, stego)}"
+                self.ssim.value = f"SSIM: {DifferenceStego.calculateSSIM(original, stego)}"
 
-            original = cv2.imread(self.original_image_path)
-            compressed = cv2.imread(self.stego_image_path, 1)
+                self.psnr.update()
+                self.mse.update()
+                self.ssim.update()
+                self.show_response("Difference calculated successfully!", is_error=False)
 
-            value = DifferenceStego.calculatePSNR(original, compressed)
-            value2 = DifferenceStego.calculateMSE(original, compressed)
-            value3 = DifferenceStego.calculateSSIM(original, compressed)
-            # print(type(value))
-            self.psnr.value = "PSNR: " + str(value)
-            self.mse.value = "MSE: " + str(value2)
-            self.ssim.value = "SSIM: " + str(value3)
-            self.psnr.update()
-            self.ssim.update()
-            self.mse.update()
-            # print(f"PSNR value is {value} unit")
-            # print(f"MSE value is {value2} unit")
-            # print(f"SSIM value is {value3} unit")
-        def on_dialog_result1(e: ft.FilePickerResultEvent):
-            print("Selected files:", e.files)
-            self.original_image_path = e.files[0].path
+            except Exception as err:
+                self.show_response(f"Error: {str(err)}", is_error=True)
 
+        def on_original_selected(e: ft.FilePickerResultEvent):
+            if e.files:
+                self.original_image_path = e.files[0].path
 
-        def on_dialog_result2(e: ft.FilePickerResultEvent):
-            print("Selected files:", e.files)
-            self.stego_image_path = e.files[0].path
+        def on_stego_selected(e: ft.FilePickerResultEvent):
+            if e.files:
+                self.stego_image_path = e.files[0].path
 
+        original_picker = ft.FilePicker(on_result=on_original_selected)
+        stego_picker = ft.FilePicker(on_result=on_stego_selected)
+        self.page.overlay.extend([original_picker, stego_picker])
 
-        my_pick1 = ft.FilePicker(on_result=on_dialog_result1)
-        self.page.overlay.append(my_pick1)
-        my_pick2 = ft.FilePicker(on_result=on_dialog_result2)
-        self.page.overlay.append(my_pick2)
         return ft.Container(
             expand=True,
             content=ft.Column(
                 [
-                    ft.Text(
-                        "Compare Original & Stego Image",
-                        size=TextStyle.HEADERFONTSIZE
-                    ),
-                    ft.Container(
-                        height=10.0,
-                        width=10.0,
-                    ),
-                    ft.Container(
-                        width=500.0,
-                        content=ft.Row(
-                                [
-                                    ft.Icon(
-                                        name=ft.icons.INFO_ROUNDED,
-                                        color=ft.colors.INDIGO_200
-                                    ),
-                                    ft.Text(
-                                        self.information,
-                                        width=480.0,
-                                    ),
-                                ],
-                        ),
-                    ),
-                    ft.Container(
-                        width=500.0,
-                    ),
-                    ft.Container(
-                        width=500.0,
-                        content=ft.Row(
-                            [
-                                ft.ElevatedButton(
-                                    "Choose Original Image",
-                                    icon=ft.icons.UPLOAD_FILE,
-                                    on_click=lambda _: my_pick1.pick_files(),
-                                ),
-                            ],
-                        ),
-                    ),
-                    ft.Container(
-                        width=500.0,
-                        content=ft.Row(
-                            [
-                                ft.ElevatedButton(
-                                    "Choose Stego Image",
-                                    icon=ft.icons.UPLOAD_FILE,
-                                    on_click=lambda _: my_pick2.pick_files(),
-                                ),
-                            ],
-                        ),
-                    ),
-                    ft.FilledButton(text="Calculate", on_click=handle_calculate_event),
+                    ft.Text("Compare Images", size=TextStyle.HEADERFONTSIZE),
+                    ft.Text(self.information, width=500.0),
+                    ft.ElevatedButton("Select Original Image", on_click=lambda _: original_picker.pick_files()),
+                    ft.ElevatedButton("Select Stego Image", on_click=lambda _: stego_picker.pick_files()),
+                    ft.FilledButton("Calculate", on_click=handle_calculate_event),
                     self.response_message,
                     self.psnr,
                     self.mse,
                     self.ssim,
                 ],
-                alignment=ft.alignment.top_left,
-                expand=True,
             ),
             alignment=ft.alignment.center,
         )
+
+    def show_response(self, message, is_error=False):
+        self.response_message.value = message
+        self.response_message.color = ft.colors.RED_ACCENT if is_error else ft.colors.GREEN_ACCENT
+        self.response_message.update()

@@ -1,7 +1,9 @@
 from flet import *
 import time
-from typing import Optional, Callable
+import traceback
+from typing import Callable
 from GUI.Screens import HomeScreen, GenerateKey, Encryption, Decryption, Difference
+
 
 class MainPanel:
     def __init__(self):
@@ -13,47 +15,95 @@ class MainPanel:
         page.horizontal_alignment = "center"
         page.vertical_alignment = "center"
 
-        # Screen handling methods
-        def handle_screen_change(screen_name: str, screen_generator: Callable):
+        # Wrapper for sidebar and main content
+        wrapper = [
+            Container(
+                width=200,
+                height=580,
+                animate=animation.Animation(500, "decelerate"),
+                border_radius=10,
+                padding=10,
+                content=None,  # Placeholder; this will be set to the sidebar
+            ),
+            HomeScreen().home_screen(),  # Initial content
+        ]
+
+        # Function to update the screen
+        def update_screen(screen_name: str, screen_generator: Callable):
             """
-            Generic screen change handler with error handling
+            Update the screen dynamically and handle errors gracefully.
+
+            Args:
+                screen_name (str): Name of the screen to switch to.
+                screen_generator (Callable): Function to generate the screen's UI.
             """
             try:
+                # Set the current screen and update the main content
                 self.current_page = screen_name
-                wrapper[1] = screen_generator()
-                page.update()
-            except Exception as e:
-                print(f"Error changing to {screen_name} screen: {e}")
+                new_screen = screen_generator()
 
-        # Specific screen handlers using generic method
+                # Debugging: Show the type of the returned component
+                print(f"Debug: Screen Generator for {screen_name} returned a component of type {type(new_screen)}")
+
+                # Check if the returned component is a valid Flet control
+                if not isinstance(new_screen, Control):
+                    raise TypeError(
+                        f"The screen generator for {screen_name} did not return a valid Flet component."
+                    )
+
+                # Update the main content of the wrapper
+                wrapper[1] = new_screen
+                page.controls.clear()  # Clear previous controls
+                page.add(Row(wrapper, alignment=alignment.center))
+                page.update()
+
+            except Exception as e:
+                error_message = f"Error while changing to {screen_name} screen: {e}"
+                print(error_message)
+                traceback.print_exc()
+
+                # Optional: Show an error message on the page
+                wrapper[1] = Container(
+                    content=Column(
+                        controls=[
+                            Text(
+                                value=f"Unable to load the {screen_name} screen.",
+                                color="red",
+                                size=18,
+                                weight="bold",
+                            ),
+                            Text(
+                                value=str(e),
+                                color="white54",
+                                size=14,
+                            ),
+                        ],
+                        alignment=MainAxisAlignment.CENTER,
+                        horizontal_alignment=CrossAxisAlignment.CENTER,
+                    )
+                )
+                page.controls.clear()
+                page.add(Row(wrapper, alignment=alignment.center))
+                page.update()
+
+        # Screen handlers
         def handle_home_screen(e):
-            handle_screen_change("HOME", HomeScreen().home_screen)
+            update_screen("HOME", HomeScreen().home_screen)
 
         def handle_comparison_screen(e):
-            handle_screen_change("COMPARISON", lambda: Difference(page).difference_panel())
+            update_screen("COMPARISON", lambda: Difference(page).difference_panel())
 
         def handle_key_generation_screen(e):
-            handle_screen_change("GENERATEKEY", GenerateKey().generate_key)
+            update_screen("GENERATEKEY", GenerateKey().generate_key)
 
         def handle_encryption_screen(e):
-            handle_screen_change("ENCRYPTION", lambda: Encryption(page).encryption())
+            update_screen("ENCRYPTION", lambda: Encryption(page).encryption())
 
         def handle_decryption_screen(e):
-            handle_screen_change("DECRYPTION", lambda: Decryption(page).decryption())
+            update_screen("DECRYPTION", lambda: Decryption(page).decryption())
 
-        # User data display method with type hints and improved docstring
-        def user_data(self, initials: str, name: str, description: str) -> Container:
-            """
-            Create a user data container with initials, name, and description
-            
-            Args:
-                initials (str): Short user/app identifier
-                name (str): Main display name
-                description (str): Subtitle or brief description
-            
-            Returns:
-                Container: Styled user data display
-            """
+        # Sidebar content
+        def user_data(initials: str, name: str, description: str) -> Container:
             return Container(
                 content=Row(
                     controls=[
@@ -73,35 +123,15 @@ class MainPanel:
                             spacing=1,
                             alignment=MainAxisAlignment.CENTER,
                             controls=[
-                                Text(
-                                    value=name,
-                                    size=15,
-                                    weight="bold",
-                                ),
-                                Text(
-                                    value=description,
-                                    size=13,
-                                    weight="w400",
-                                    color="white54",
-                                ),
+                                Text(value=name, size=15, weight="bold"),
+                                Text(value=description, size=13, weight="w400", color="white54"),
                             ],
                         ),
                     ]
                 )
             )
 
-        # Improved contained icon method with type hints
-        def contained_icon(self, icon_name: str, text: str) -> Container:
-            """
-            Create a container with an icon and text
-            
-            Args:
-                icon_name (str): Name of the icon
-                text (str): Text to display next to icon
-            
-            Returns:
-                Container: Styled icon and text container
-            """
+        def contained_icon(icon_name: str, text: str) -> Container:
             return Container(
                 width=180,
                 height=45,
@@ -114,23 +144,17 @@ class MainPanel:
                             icon_size=25,
                             icon_color="white54",
                             style=ButtonStyle(
-                                shape={
-                                    "": RoundedRectangleBorder(radius=7),
-                                },
+                                shape={"": RoundedRectangleBorder(radius=7)},
                                 overlay_color={"": "transparent"},
                             ),
                         ),
-                        Text(
-                            value=text,
-                            color="white54",
-                            size=15,
-                        ),
+                        Text(value=text, color="white54", size=15),
                     ],
                 ),
             )
 
-        # Navigation sidebar
-        build = Container(
+        # Build the sidebar
+        sidebar = Container(
             width=200,
             height=580,
             alignment=alignment.center,
@@ -138,15 +162,13 @@ class MainPanel:
                 alignment=MainAxisAlignment.START,
                 horizontal_alignment=CrossAxisAlignment.CENTER,
                 controls=[
-                    user_data(self, "IS", "IS", "Image Steganography"),
+                    user_data("IS", "IS", "Image Steganography"),
                     Divider(height=5, color="white24"),
-                    
-                    # Consolidated navigation items
                     *[
                         GestureDetector(
                             on_tap=handler,
-                            content=contained_icon(self, icon, label)
-                        ) 
+                            content=contained_icon(icon, label)
+                        )
                         for handler, icon, label in [
                             (handle_home_screen, icons.HOME_ROUNDED, "Home"),
                             (handle_key_generation_screen, icons.KEY_ROUNDED, "Generate Key"),
@@ -155,73 +177,13 @@ class MainPanel:
                             (handle_comparison_screen, icons.CODE_ROUNDED, "Comparison"),
                         ]
                     ],
-                    
                     Divider(height=5, color="white24"),
                 ],
             ),
         )
 
-        # Wrapper for sidebar and main content
-        wrapper = [
-            Container(
-                width=200,
-                height=580,
-                animate=animation.Animation(500, "decelerate"),
-                border_radius=10,
-                padding=10,
-                content=build,
-            ),
-            HomeScreen().home_screen(),
-        ]
-
-        # Navbar animation with improved structure
-        def animated_navBar(e):
-            """
-            Animate navigation bar expansion/collapse
-            """
-            navbar = page.controls[0]
-            is_expanded = navbar.width != 62
-
-            if not is_expanded:
-                # Collapse logic
-                _collapse_navbar(navbar)
-            else:
-                # Expand logic
-                _expand_navbar(navbar)
-
-        def _collapse_navbar(navbar):
-            """Helper to collapse navbar"""
-            for item in navbar.content.controls[0].content.controls[0].content.controls[1].controls[:]:
-                item.opacity = 0
-                item.update()
-
-            for item in navbar.content.controls[0].content.controls[3:]:
-                if isinstance(item, Container):
-                    item.content.controls[1].opacity = 0
-                    item.content.update()
-
-            time.sleep(0.2)
-            navbar.width = 62
-            navbar.update()
-
-        def _expand_navbar(navbar):
-            """Helper to expand navbar"""
-            navbar.width = 200
-            navbar.update()
-
-            time.sleep(0.2)
-
-            for item in navbar.content.controls[0].content.controls[0].content.controls[1].controls[:]:
-                item.opacity = 1
-                item.update()
-
-            for item in navbar.content.controls[0].content.controls[3:]:
-                if isinstance(item, Container):
-                    item.content.controls[1].opacity = 1
-                    item.content.update()
+        wrapper[0].content = sidebar
 
         # Add content to page
-        page.add(
-            Row(wrapper, alignment=alignment.center),
-        )
+        page.add(Row(wrapper, alignment=alignment.center))
         page.update()
