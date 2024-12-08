@@ -6,16 +6,15 @@ import os
 class Decrypter:
     def __init__(self, key):
         """
-        Initializes the Decrypter with a key of valid length.
+        Initializes the Decrypter with a key of valid length (16, 24, or 32 bytes).
         """
+        # Ensure the key is in bytes
+        if isinstance(key, str):
+            key = key.encode("utf-8")  # Convert to bytes if it's a string
+
+        # Adjust the key length to 32 bytes (valid for AES)
         if len(key) not in [16, 24, 32]:
             raise ValueError("Key must be 16, 24, or 32 bytes long.")
-        
-        # Ensure the key is exactly 32 bytes (padding if necessary)
-        if len(key) < 32:
-            key = key.ljust(32, b'\0')  # Pad with null bytes if it's shorter than 32 bytes
-        elif len(key) > 32:
-            key = key[:32]  # Truncate if the key is longer than 32 bytes
         
         self.key = key
 
@@ -25,18 +24,17 @@ class Decrypter:
         """
         try:
             iv = ciphertext[:16]  # Extract the first 16 bytes as the IV
-            actual_ciphertext = ciphertext[16:]  # The remaining part is the actual ciphertext
+            actual_ciphertext = ciphertext[16:]  # The remaining part is the ciphertext
             
             cipher = Cipher(algorithms.AES(self.key), modes.CBC(iv), backend=default_backend())
             decryptor = cipher.decryptor()
             padded_plaintext = decryptor.update(actual_ciphertext) + decryptor.finalize()
-            
+
             # Remove PKCS7 padding
             unpadder = PKCS7(128).unpadder()
             plaintext = unpadder.update(padded_plaintext) + unpadder.finalize()
-            
+
             return plaintext
-        
         except Exception as e:
             raise ValueError(f"Decryption failed: {str(e)}")
 
@@ -46,14 +44,14 @@ class Decrypter:
         """
         if not os.path.exists(file_name):
             raise FileNotFoundError(f"The file {file_name} does not exist.")
-        
+
         try:
             with open(file_name, 'rb') as fo:
-                ciphertext = fo.read()
+                ciphertext = fo.read()  # Read the encrypted file in binary mode
 
             # Decrypt the file contents
             decrypted_data = self.decrypt(ciphertext)
-            
+
             original_file_name = file_name[:-4]  # Remove '.enc' extension from file name
             with open(original_file_name, 'wb') as fo:
                 fo.write(decrypted_data)
