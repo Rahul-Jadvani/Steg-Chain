@@ -1,0 +1,1 @@
+from .msg import global_message

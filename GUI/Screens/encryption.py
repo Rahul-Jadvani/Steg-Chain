@@ -4,9 +4,11 @@ import base64
 from Cryptography import KeyGeneration, Encrypter
 from Steganography import Encoding
 from GUI.Constants import TextStyle
+from config import CONFIG
 
 
 class Encryption:
+
     def __init__(self, page):
         self.page = page
         super().__init__()
@@ -30,7 +32,7 @@ class Encryption:
         min_lines=5,
         max_lines=5,
     )
-
+    
     response_message = ft.Text(
         "",
         color=ft.colors.GREEN_ACCENT,
@@ -77,8 +79,10 @@ class Encryption:
                 with open(key_file_path, "rb") as key_file:
                     key = key_file.read()
 
+                CONFIG['global_message'] = self.key_data.value
+
                 # Encrypt the provided data
-                data_to_encrypt = self.key_data.value.encode()
+                data_to_encrypt = CONFIG['global_message'].encode()
                 encrypter = Encrypter(key)
                 encrypted_data = encrypter.encrypt(data_to_encrypt)
 
@@ -90,6 +94,10 @@ class Encryption:
 
                 # Use Steganography to encode the encrypted data into the image
                 Encoding.encode(self.image_path, encoded_data, destination_image_path)
+
+                global_message = self.key_data.value
+
+                print(global_message)
 
                 self.response_message.value = "Encrypted image saved successfully!"
                 self.response_message.color = ft.colors.GREEN_ACCENT
